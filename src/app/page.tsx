@@ -156,7 +156,8 @@ function BankingSimulator({ adapterUrl, rejectCodes }: { adapterUrl: string; rej
       if (!res.ok) return;
       const data: AdapterStats = await res.json();
       setStats(data);
-      setConfig(data.config);
+      // Audit 4 Y13 — adapter devuelve rejectionRate en 0-1; UI lo muestra 0-100.
+      setConfig({ ...data.config, rejectionRate: Math.round(data.config.rejectionRate * 100) });
     } catch { /* offline */ } finally { setStatsLoading(false); }
   }, [adapterUrl]);
 
@@ -169,8 +170,10 @@ function BankingSimulator({ adapterUrl, rejectCodes }: { adapterUrl: string; rej
   const saveConfig = async () => {
     try {
       setActionLoading('config');
+      // Audit 4 Y13 — UI mantiene rejectionRate en 0-100 (slider); adapter 0-1.
+      const payload = { ...config, rejectionRate: config.rejectionRate / 100 };
       const res = await fetch(`${adapterUrl}/admin/config`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(config),
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error();
       toast.success('Configuracion guardada');
@@ -336,21 +339,24 @@ export default function SpeiSimulatorPage() {
   const localForm = useForm<LocalValues>({
     resolver: zodResolver(localSchema),
     defaultValues: {
-      debtorAlias: 'SPEI-012180000118359719', debtorName: 'Juan Perez',
-      creditorAlias: 'SPEI-002180012345678901', creditorName: 'Maria Garcia',
+      // Audit 4 Y14 — CLABE mod-10 weighted válidas.
+      debtorAlias: 'SPEI-012180000118359713', debtorName: 'Juan Pérez',
+      creditorAlias: 'SPEI-002180012345678906', creditorName: 'María García',
       amount: 500.00, currency: 'MXN', purpose: 'TRANSFERENCIA', reference: 'SPEI-TEST-001',
     },
   });
 
+  // Audit 4 Y14 — CPF mod-11 + +57 mobile-only TR-002.
   const DEST_DEFAULTS: Record<DestRail, { alias: string; name: string }> = {
-    PIX:  { alias: 'PIX-11999887766',    name: 'Joao Silva' },
-    BREB: { alias: 'BREB-+573005551234', name: 'Ana Lopez'  },
+    PIX:  { alias: 'PIX-12345678909',    name: 'João Silva' },
+    BREB: { alias: 'BREB-+573001234567', name: 'Ana López'  },
   };
 
   const intlForm = useForm<IntlValues>({
     resolver: zodResolver(intlSchema),
     defaultValues: {
-      debtorAlias: 'SPEI-012180000118359719', debtorName: 'Juan Perez',
+      // Audit 4 Y14 — CLABE válido (idéntico al de Local form).
+      debtorAlias: 'SPEI-012180000118359713', debtorName: 'Juan Pérez',
       creditorAlias: DEST_DEFAULTS.PIX.alias, creditorName: DEST_DEFAULTS.PIX.name,
       amount: 500.00, reference: 'SPEI-INTL-001',
     },
@@ -362,9 +368,22 @@ export default function SpeiSimulatorPage() {
     intlForm.setValue('creditorName',  DEST_DEFAULTS[rail].name);
   };
 
+  // Audit 4 Y1 — el core devuelve { access_token, token_type, expires_in };
+  // antes leíamos { token } → Bearer undefined → 401 silencioso.
+  async function getToken(): Promise<string> {
+    const r = await fetch(`${apiUrl}/auth/token`, { method: 'POST' });
+    if (!r.ok) throw new Error(`auth/token HTTP ${r.status}`);
+    const j = (await r.json()) as { access_token?: string };
+    return j.access_token ?? '';
+  }
+
   const pollPayment = useCallback(async (id: string) => {
     try {
-      const res = await fetch(`${apiUrl}/payments/${id}`);
+      // Audit 4 Y3 — antes /payments/:id sin Authorization → 401 silencioso.
+      const token = await getToken().catch(() => '');
+      const res = await fetch(`${apiUrl}/payments/${id}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
       if (!res.ok) return;
       const data: PaymentDetail = await res.json();
       setPayment(data);
@@ -382,7 +401,8 @@ export default function SpeiSimulatorPage() {
   const onLocalSubmit = async (data: LocalValues) => {
     try {
       setLocalStatus('loading');
-      const res = await fetch(`${apiUrl}/api/simulate/spei`, {
+      // Audit 4 Y2 — /api/simulate/spei vive en mock-server (:9002), NO core.
+      const res = await fetch(`${adapterUrl}/api/simulate/spei`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data),
       });
       if (!res.ok) throw new Error(`Error ${res.status}`);
@@ -399,8 +419,7 @@ export default function SpeiSimulatorPage() {
     try {
       setIntlStatus('loading');
       setPayment(null);
-      const tokenRes = await fetch(`${apiUrl}/auth/token`);
-      const { token } = tokenRes.ok ? await tokenRes.json() : { token: '' };
+      const token = await getToken().catch(() => '');
       const body = {
         amount: data.amount, currency: 'MXN',
         debtor:   { alias: data.debtorAlias,  name: data.debtorName  || undefined },
