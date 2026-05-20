@@ -3,14 +3,21 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-ARG NEXT_PUBLIC_API_URL=http://adapter-spei:5000
-ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+# Audit 4 — Next.js bakea NEXT_PUBLIC_* en build time. La build var del
+# original (NEXT_PUBLIC_API_URL) no coincidía con la que lee page.tsx
+# (NEXT_PUBLIC_API_BASE_URL); además faltaba NEXT_PUBLIC_ADAPTER_URL.
+ARG NEXT_PUBLIC_API_BASE_URL=http://localhost:8080
+ARG NEXT_PUBLIC_ADAPTER_URL=http://localhost:9002
+ENV NEXT_PUBLIC_API_BASE_URL=$NEXT_PUBLIC_API_BASE_URL
+ENV NEXT_PUBLIC_ADAPTER_URL=$NEXT_PUBLIC_ADAPTER_URL
 
 COPY package*.json ./
 RUN npm install
 
 COPY . .
-RUN npm run build
+# Audit 4 — Next.js standalone copia /public; el repo aún no tiene esta
+# carpeta así que la creamos vacía para evitar fallo en docker build.
+RUN mkdir -p public && npm run build
 
 # Runtime stage
 FROM node:20-alpine
