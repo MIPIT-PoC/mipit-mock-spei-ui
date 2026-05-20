@@ -508,7 +508,8 @@ export default function SpeiSimulatorPage() {
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <label className="block text-xs font-medium text-zinc-400 mb-1">CLABE Ordenante</label>
-                        <input {...localForm.register('debtorAlias')} placeholder="SPEI-012180000118359719" className={`${inp} font-mono`} />
+                        {/* Audit 4 — CLABE mod-10 weighted válida (check digit 3, no 9). */}
+                        <input {...localForm.register('debtorAlias')} placeholder="SPEI-012180000118359713" className={`${inp} font-mono`} />
                         <p className="text-[10px] text-zinc-500 mt-0.5">SPEI-{'{CLABE 18}'}</p>
                       </div>
                       <div>
@@ -519,7 +520,8 @@ export default function SpeiSimulatorPage() {
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <label className="block text-xs font-medium text-zinc-400 mb-1">CLABE Beneficiario</label>
-                        <input {...localForm.register('creditorAlias')} placeholder="SPEI-002180012345678901" className={`${inp} font-mono`} />
+                        {/* Audit 4 — CLABE mod-10 weighted válida (check digit 6, no 1). */}
+                        <input {...localForm.register('creditorAlias')} placeholder="SPEI-002180012345678906" className={`${inp} font-mono`} />
                       </div>
                       <div>
                         <label className="block text-xs font-medium text-zinc-400 mb-1">Nombre Beneficiario</label>
