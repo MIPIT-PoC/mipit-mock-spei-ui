@@ -1,8 +1,8 @@
 /**
- * Next.js config — SPEI mock UI.
- * basePath se setea via NEXT_PUBLIC_BASE_PATH (build arg).
- * - Local dev: vacío → root.
- * - VM1 detrás de nginx 443: basePath="/mock-spei".
+ * @file next.config.mjs
+ * @description Next.js build configuration for the SPEI mock UI; enables standalone output and applies NEXT_PUBLIC_BASE_PATH so the app can serve at "/" in dev and "/mock-spei" behind the VM1 nginx reverse proxy.
+ * @author Carlos Mejía
+ * @project MIPIT-PoC — Cross-border Instant Payments Middleware
  */
 /** @type {import('next').NextConfig} */
 const nextConfig = {

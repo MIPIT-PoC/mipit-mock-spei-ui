@@ -1,5 +1,11 @@
 'use client';
 
+/**
+ * @file page.tsx
+ * @description SPEI simulator landing page: composes a SPEI request with 18-digit CLABE debtor/creditor, supports Local (mock-server shortcut), International (full mipit-core ISO 20022 pipeline) and Banking Simulator tabs with live adapter stats and configuration.
+ * @author Miguel Ángel Rico
+ * @project MIPIT-PoC — Cross-border Instant Payments Middleware
+ */
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
